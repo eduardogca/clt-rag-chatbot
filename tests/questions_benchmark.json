@@ -1,0 +1,22 @@
+[
+  {
+    "question": "Quantos dias de férias o trabalhador tem direito após 12 meses de trabalho?",
+    "expected_keywords": ["30 dias", "Art. 130"]
+  },
+  {
+    "question": "Qual o prazo para pagamento do FGTS após demissão sem justa causa?",
+    "expected_keywords": ["FGTS", "demissão"]
+  },
+  {
+    "question": "O empregador pode demitir um funcionário durante a licença médica?",
+    "expected_keywords": ["estabilidade", "acidente", "doença"]
+  },
+  {
+    "question": "Qual é a jornada máxima de trabalho diária prevista na CLT?",
+    "expected_keywords": ["8 horas", "Art. 58"]
+  },
+  {
+    "question": "Quais são os direitos da trabalhadora gestante?",
+    "expected_keywords": ["licença-maternidade", "estabilidade", "120 dias"]
+  }
+]
