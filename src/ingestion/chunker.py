@@ -1,11 +1,65 @@
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+import re
 from pathlib import Path
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+MAX_CHUNK_SIZE = 1500  # artigos muito longos são subdivididos
 
 
 def load_text(path: str) -> str:
     return Path(path).read_text(encoding="utf-8")
 
 
+def chunk_by_article(text: str) -> list[dict]:
+    """
+    Splits CLT text into chunks by article (Art. X).
+    Returns list of {"text": ..., "artigo": "Art. X", "secao": "TÍTULO I..."}.
+    Long articles are further split with overlap, keeping the article reference.
+    """
+    pattern = re.compile(r"(?=^Art\.\s+\d+[\w\-]*)", re.MULTILINE)
+    parts = pattern.split(text)
+
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=MAX_CHUNK_SIZE,
+        chunk_overlap=150,
+        separators=["\n\n", "\n", " ", ""],
+    )
+
+    titulo_pattern = re.compile(
+        r"^(TÍTULO|CAPÍTULO|SEÇÃO|Título|Capítulo|Seção)\s+.+", re.MULTILINE
+    )
+    current_secao = "Introdução"
+    chunks = []
+
+    for part in parts:
+        part = part.strip()
+        if not part:
+            continue
+
+        # Update current section heading if found before the article text
+        secao_match = titulo_pattern.search(part)
+        if secao_match:
+            current_secao = secao_match.group(0).strip()
+
+        # Extract article number from the first line
+        artigo_match = re.match(r"(Art\.\s+\d+[\w\-]*)", part)
+        artigo = artigo_match.group(1) if artigo_match else "Preâmbulo"
+
+        if len(part) <= MAX_CHUNK_SIZE:
+            chunks.append({"text": part, "artigo": artigo, "secao": current_secao})
+        else:
+            # Subdivide long articles keeping metadata
+            sub_chunks = splitter.split_text(part)
+            for idx, sub in enumerate(sub_chunks):
+                chunks.append({
+                    "text": sub,
+                    "artigo": artigo,
+                    "secao": current_secao,
+                })
+
+    return chunks
+
+
+# Keep backward-compatible function for notebooks/tests that import chunk_text
 def chunk_text(text: str, chunk_size: int = 1000, chunk_overlap: int = 200) -> list[str]:
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size,
@@ -17,6 +71,9 @@ def chunk_text(text: str, chunk_size: int = 1000, chunk_overlap: int = 200) -> l
 
 if __name__ == "__main__":
     text = load_text("data/processed/clt.txt")
-    chunks = chunk_text(text)
+    chunks = chunk_by_article(text)
     print(f"Total chunks: {len(chunks)}")
-    print(f"\nExample chunk:\n{chunks[0]}")
+    print(f"\nExample chunk:")
+    print(f"  artigo : {chunks[10]['artigo']}")
+    print(f"  secao  : {chunks[10]['secao']}")
+    print(f"  texto  : {chunks[10]['text'][:200]}...")
