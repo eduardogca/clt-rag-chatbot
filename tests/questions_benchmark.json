@@ -1,22 +1,72 @@
 [
   {
+    "id": 1,
+    "topic": "férias",
     "question": "Quantos dias de férias o trabalhador tem direito após 12 meses de trabalho?",
+    "expected_answer": "O trabalhador tem direito a 30 dias corridos de férias após cada período aquisitivo de 12 meses, conforme o Art. 130 da CLT. As férias podem ser divididas em até três períodos, sendo que um deles não pode ser inferior a 14 dias corridos.",
     "expected_keywords": ["30 dias", "Art. 130"]
   },
   {
-    "question": "Qual o prazo para pagamento do FGTS após demissão sem justa causa?",
-    "expected_keywords": ["FGTS", "demissão"]
+    "id": 2,
+    "topic": "aviso prévio",
+    "question": "Qual é o prazo mínimo do aviso prévio na demissão sem justa causa?",
+    "expected_answer": "O aviso prévio mínimo é de 30 dias, conforme o Art. 487 da CLT. Além disso, a legislação prevê o acréscimo de 3 dias por ano de serviço prestado ao mesmo empregador, até o limite máximo de 90 dias.",
+    "expected_keywords": ["30 dias", "Art. 487"]
   },
   {
-    "question": "O empregador pode demitir um funcionário durante a licença médica?",
-    "expected_keywords": ["estabilidade", "acidente", "doença"]
+    "id": 3,
+    "topic": "jornada de trabalho",
+    "question": "Qual é a jornada máxima de trabalho diária e semanal prevista na CLT?",
+    "expected_answer": "A jornada máxima é de 8 horas diárias e 44 horas semanais, conforme o Art. 58 da CLT. Acordos ou convenções coletivas podem prever compensações de jornada e bancos de horas.",
+    "expected_keywords": ["8 horas", "44 horas", "Art. 58"]
   },
   {
-    "question": "Qual é a jornada máxima de trabalho diária prevista na CLT?",
-    "expected_keywords": ["8 horas", "Art. 58"]
+    "id": 4,
+    "topic": "hora extra",
+    "question": "Qual o acréscimo mínimo que deve ser pago ao trabalhador por hora extra?",
+    "expected_answer": "O acréscimo mínimo é de 50% sobre o valor da hora normal, conforme o Art. 59 da CLT. Convenções coletivas podem prever percentuais maiores. O limite de horas extras é de 2 horas por dia.",
+    "expected_keywords": ["50%", "Art. 59"]
   },
   {
-    "question": "Quais são os direitos da trabalhadora gestante?",
-    "expected_keywords": ["licença-maternidade", "estabilidade", "120 dias"]
+    "id": 5,
+    "topic": "FGTS",
+    "question": "Qual é o percentual do FGTS que o empregador deve depositar mensalmente?",
+    "expected_answer": "O empregador deve depositar mensalmente o equivalente a 8% da remuneração paga ao empregado na conta vinculada do FGTS. Na hipótese de demissão sem justa causa, o empregador paga adicionalmente uma multa de 40% sobre o saldo do fundo.",
+    "expected_keywords": ["8%", "FGTS"]
+  },
+  {
+    "id": 6,
+    "topic": "licença maternidade",
+    "question": "Qual é a duração da licença-maternidade prevista na CLT?",
+    "expected_answer": "A licença-maternidade tem duração de 120 dias, conforme o Art. 392 da CLT. Durante esse período, a empregada não pode ser dispensada sem justa causa, desde a confirmação da gravidez até 5 meses após o parto.",
+    "expected_keywords": ["120 dias", "Art. 392"]
+  },
+  {
+    "id": 7,
+    "topic": "intervalo intrajornada",
+    "question": "Qual é o intervalo mínimo para refeição e descanso em jornadas acima de 6 horas?",
+    "expected_answer": "Para jornadas superiores a 6 horas, o intervalo mínimo é de 1 hora, conforme o Art. 71 da CLT. Para jornadas entre 4 e 6 horas, o intervalo é de 15 minutos. O intervalo não pode ser suprimido ou reduzido, salvo por convenção coletiva.",
+    "expected_keywords": ["1 hora", "Art. 71"]
+  },
+  {
+    "id": 8,
+    "topic": "rescisão",
+    "question": "Quais verbas rescisórias o trabalhador recebe ao ser demitido sem justa causa?",
+    "expected_answer": "Na demissão sem justa causa, o trabalhador tem direito a: saldo de salário, aviso prévio (trabalhado ou indenizado), férias vencidas e proporcionais acrescidas de 1/3, 13º salário proporcional, e saque do FGTS com multa de 40% sobre o saldo. Conforme Arts. 477 e 487 da CLT.",
+    "expected_keywords": ["aviso prévio", "férias", "FGTS", "40%"]
+  },
+  {
+    "id": 9,
+    "topic": "salário mínimo",
+    "question": "Como a CLT define o salário mínimo e quais necessidades ele deve cobrir?",
+    "expected_answer": "Conforme o Art. 76 da CLT, o salário mínimo é a contraprestação mínima devida ao trabalhador, fixada em lei, capaz de satisfazer as necessidades normais de alimentação, habitação, vestuário, higiene e transporte. Nenhum salário pode ser inferior ao mínimo vigente.",
+    "expected_keywords": ["Art. 76", "salário mínimo"]
+  },
+  {
+    "id": 10,
+    "topic": "trabalho noturno",
+    "question": "Qual é o adicional noturno previsto na CLT e como é contada a hora noturna?",
+    "expected_answer": "O trabalho noturno, realizado entre 22h e 5h, confere ao trabalhador um adicional de 20% sobre a hora diurna, conforme o Art. 73 da CLT. A hora noturna é computada como 52 minutos e 30 segundos, o que gera mais horas efetivas dentro do mesmo turno.",
+    "expected_keywords": ["20%", "Art. 73", "52 minutos"]
   }
 ]
