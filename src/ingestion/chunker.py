@@ -24,8 +24,9 @@ def chunk_by_article(text: str) -> list[dict]:
         separators=["\n\n", "\n", " ", ""],
     )
 
+    # Matches section headings but NOT table-of-contents lines (which have dots)
     titulo_pattern = re.compile(
-        r"^(TÍTULO|CAPÍTULO|SEÇÃO|Título|Capítulo|Seção)\s+.+", re.MULTILINE
+        r"^(TÍTULO|CAPÍTULO|SEÇÃO|Título|Capítulo|Seção)\s+[^\n\.]{3,}$", re.MULTILINE
     )
     current_secao = "Introdução"
     chunks = []
@@ -35,21 +36,27 @@ def chunk_by_article(text: str) -> list[dict]:
         if not part:
             continue
 
-        # Update current section heading if found before the article text
-        secao_match = titulo_pattern.search(part)
-        if secao_match:
-            current_secao = secao_match.group(0).strip()
+        # Update current section heading if found (skip TOC lines with dots)
+        for match in titulo_pattern.finditer(part):
+            heading = match.group(0).strip()
+            if "....." not in heading:
+                current_secao = heading
+                break
 
         # Extract article number from the first line
         artigo_match = re.match(r"(Art\.\s+\d+[\w\-]*)", part)
-        artigo = artigo_match.group(1) if artigo_match else "Preâmbulo"
+        artigo = artigo_match.group(1) if artigo_match else None
+
+        # Skip preamble chunks (no article number = editorial intro, not CLT content)
+        if artigo is None:
+            continue
 
         if len(part) <= MAX_CHUNK_SIZE:
             chunks.append({"text": part, "artigo": artigo, "secao": current_secao})
         else:
             # Subdivide long articles keeping metadata
             sub_chunks = splitter.split_text(part)
-            for idx, sub in enumerate(sub_chunks):
+            for sub in sub_chunks:
                 chunks.append({
                     "text": sub,
                     "artigo": artigo,

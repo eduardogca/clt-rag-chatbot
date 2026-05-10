@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
-from retriever import get_retriever
+from src.retrieval.retriever import get_retriever
 
 load_dotenv()
 

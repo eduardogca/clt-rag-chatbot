@@ -1,8 +1,5 @@
-import sys
 import streamlit as st
-
-sys.path.append("src/retrieval")
-from chain import build_chain
+from src.retrieval.chain import build_chain
 
 st.set_page_config(page_title="Assistente CLT", page_icon="⚖️", layout="centered")
 st.title("⚖️ Assistente da CLT")
