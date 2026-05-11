@@ -1,13 +1,13 @@
 import os
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.chains import ConversationalRetrievalChain
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
 from src.retrieval.retriever import get_retriever
 
 load_dotenv()
 
-_CONDENSE_QUESTION_PROMPT = PromptTemplate.from_template(
+_CONDENSE_PROMPT = ChatPromptTemplate.from_template(
     """Dado o histórico da conversa e uma pergunta de acompanhamento, reformule a pergunta
 para ser independente e autocontida, preservando o contexto necessário. Responda apenas com a
 pergunta reformulada, sem explicações adicionais.
@@ -20,8 +20,8 @@ Pergunta de acompanhamento: {question}
 Pergunta reformulada:"""
 )
 
-_QA_PROMPT = PromptTemplate(
-    template="""Você é um assistente jurídico especialista na Consolidação das Leis do Trabalho \
+_QA_PROMPT = ChatPromptTemplate.from_template(
+    """Você é um assistente jurídico especialista na Consolidação das Leis do Trabalho \
 (CLT) brasileira.
 
 Diretrizes:
@@ -38,28 +38,24 @@ Trechos da CLT:
 
 Pergunta: {question}
 
-Resposta:""",
-    input_variables=["context", "question"],
+Resposta:"""
 )
 
-_chain: ConversationalRetrievalChain | None = None
+_llm: ChatGoogleGenerativeAI | None = None
+_retriever = None
 
 
-def build_chain() -> ConversationalRetrievalChain:
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-1.5-flash",
-        google_api_key=os.getenv("GOOGLE_API_KEY"),
-        temperature=0.2,
-    )
-    retriever = get_retriever(k=6)
-    return ConversationalRetrievalChain.from_llm(
-        llm=llm,
-        retriever=retriever,
-        condense_question_prompt=_CONDENSE_QUESTION_PROMPT,
-        combine_docs_chain_kwargs={"prompt": _QA_PROMPT},
-        return_source_documents=False,
-        verbose=False,
-    )
+def _get_components():
+    global _llm, _retriever
+    if _llm is None:
+        _llm = ChatGoogleGenerativeAI(
+            model="gemini-2.5-flash",
+            google_api_key=os.getenv("GOOGLE_API_KEY"),
+            temperature=0.2,
+        )
+    if _retriever is None:
+        _retriever = get_retriever(k=6)
+    return _llm, _retriever
 
 
 def get_answer(question: str, chat_history: list[tuple[str, str]]) -> str:
@@ -69,8 +65,19 @@ def get_answer(question: str, chat_history: list[tuple[str, str]]) -> str:
         question: Pergunta do usuário.
         chat_history: Histórico como lista de tuplas (pergunta_humano, resposta_assistente).
     """
-    global _chain
-    if _chain is None:
-        _chain = build_chain()
-    result = _chain.invoke({"question": question, "chat_history": chat_history})
-    return result["answer"]
+    llm, retriever = _get_components()
+
+    if chat_history:
+        formatted_history = "\n".join(
+            f"Humano: {h}\nAssistente: {a}" for h, a in chat_history
+        )
+        question = (_CONDENSE_PROMPT | llm | StrOutputParser()).invoke(
+            {"chat_history": formatted_history, "question": question}
+        )
+
+    docs = retriever.invoke(question)
+    context = "\n\n".join(doc.page_content for doc in docs)
+
+    return (_QA_PROMPT | llm | StrOutputParser()).invoke(
+        {"context": context, "question": question}
+    )

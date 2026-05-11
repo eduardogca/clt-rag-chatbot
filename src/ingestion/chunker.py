@@ -1,6 +1,6 @@
 import re
 from pathlib import Path
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 MAX_CHUNK_SIZE = 1500  # artigos muito longos são subdivididos
 
