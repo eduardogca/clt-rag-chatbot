@@ -1,5 +1,5 @@
 import streamlit as st
-from src.retrieval.chain import get_answer
+from src.retrieval.agent import get_agent_answer
 
 st.set_page_config(page_title="Assistente CLT", page_icon="⚖️", layout="centered")
 st.title("⚖️ Assistente da CLT")
@@ -26,7 +26,7 @@ if question := st.chat_input("Faça sua pergunta sobre a CLT..."):
 
     with st.chat_message("assistant"):
         with st.spinner("Consultando a CLT..."):
-            answer = get_answer(question, history)
+            answer = get_agent_answer(question, history)
         st.markdown(answer)
 
     st.session_state.messages.append({"role": "assistant", "content": answer})

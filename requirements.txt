@@ -2,6 +2,7 @@ langchain==1.2.18
 langchain-google-genai==4.2.2
 langchain-chroma==0.2.4
 langchain-text-splitters==1.1.2
+langgraph==1.1.10
 pypdf==5.4.0
 python-dotenv==1.1.0
 streamlit==1.45.0

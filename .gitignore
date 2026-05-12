@@ -19,3 +19,6 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# ChromaDB (binário, não versionar acessos)
+data/vectorstore/chroma.sqlite3
