@@ -2,7 +2,7 @@
 
 Chatbot especialista na **Consolidação das Leis do Trabalho (CLT)** brasileira, desenvolvido com RAG agêntico usando Gemini 2.5 Flash, ChromaDB e LangGraph.
 
-Projeto acadêmico — Disciplina de NLP, 6º Semestre, Data Science.
+Projeto acadêmico — Disciplina de NLP, Data Science.
 
 🔗 **[Acesse o chatbot aqui](https://clt-rag-chatbot-q6672mji7webv8wr6qhznf.streamlit.app/)**
 
