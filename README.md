@@ -1,89 +1,39 @@
-# ⚖️ CLT RAG Chatbot
+### 4. Rodar a interface
 
-Chatbot especialista na Consolidação das Leis do Trabalho (CLT) brasileira, desenvolvido com RAG (Retrieval-Augmented Generation) usando Gemini 1.5 Flash e ChromaDB.
+```bash
+# Windows
+set PYTHONPATH=. && py -3.11 -m streamlit run src/app/streamlit_app.py
 
-Projeto acadêmico — NLP, 6º Semestre Data Science.
+# Linux / Mac
+PYTHONPATH=. streamlit run src/app/streamlit_app.py
+```
+
+> **Nota:** o ChromaDB já está persistido no repositório em `data/vectorstore/`. Não é necessário rodar o pipeline de ingestão novamente.
 
 ---
 
-## Arquitetura
+## Pipeline de Ingestão (referência)
 
+Caso precise regenerar o vectorstore do zero:
+
+```bash
+python src/ingestion/extractor.py    # extrai texto do PDF
+python src/ingestion/chunker.py      # divide por artigo com metadados
+python src/ingestion/embedder.py     # gera embeddings e salva no ChromaDB
 ```
-PDF da CLT → Extração → Chunking → Embeddings → ChromaDB
-                                                     ↓
-                                   Pergunta → Retrieval → Gemini → Resposta
-```
 
-## Stack
-
-| Componente | Tecnologia |
-|---|---|
-| LLM | Gemini 1.5 Flash (Google AI Studio) |
-| Embeddings | models/text-embedding-004 (Google) |
-| Vectorstore | ChromaDB (persistido no repo) |
-| Framework | LangChain |
-| Interface | Streamlit |
+O chunking foi feito por artigo (1.183 chunks), com metadados de artigo e seção para citação precisa nas respostas.
 
 ---
 
-## Estrutura
+## Pipeline RAG Agêntico
 
-```
-clt-rag-chatbot/
-├── data/
-│   ├── raw/              # PDF original da CLT
-│   ├── processed/        # Texto extraído
-│   └── vectorstore/      # ChromaDB persistido
-├── src/
-│   ├── ingestion/        # Extração, chunking e embeddings (Pessoa 1)
-│   ├── retrieval/        # RAG pipeline e LLM (Pessoa 2)
-│   └── app/              # Interface Streamlit (Pessoa 3)
-├── notebooks/            # Experimentos e avaliação
-└── tests/                # Benchmark de perguntas
-```
+O sistema usa um grafo LangGraph com avaliação de relevância em dois estágios:
 
----
-
-## Setup
-
-### 1. Clonar o repositório
-
-```bash
-git clone https://github.com/<seu-usuario>/clt-rag-chatbot.git
-cd clt-rag-chatbot
-```
-
-### 2. Instalar dependências
-
-```bash
-pip install -r requirements.txt
-```
-
-### 3. Configurar a API Key
-
-```bash
-cp .env.example .env
-# Edite o .env e insira sua GOOGLE_API_KEY
-```
-
-### 4. Adicionar o PDF da CLT
-
-Coloque o arquivo `clt.pdf` em `data/raw/clt.pdf`.
-Download: [Planalto.gov.br](https://www.planalto.gov.br/ccivil_03/decreto-lei/del5452.htm)
-
-### 5. Rodar o pipeline de ingestão (apenas uma vez)
-
-```bash
-cd src/ingestion
-python extractor.py   # extrai texto do PDF
-python embedder.py    # gera embeddings e salva no ChromaDB
-```
-
-### 6. Rodar a interface
-
-```bash
-streamlit run src/app/streamlit_app.py
-```
+1. **Retrieval** — recupera k=8 chunks do ChromaDB
+2. **Avaliação** — pontuação combinada: `0.4 × cosine_similarity + 0.6 × llm_judge`
+3. **Decisão** — se score médio < 0.45 e tentativas < 3, reformula a query e repete
+4. **Geração** — usa apenas chunks com score ≥ 0.45 para gerar a resposta
 
 ---
 
@@ -91,15 +41,23 @@ streamlit run src/app/streamlit_app.py
 
 | Pessoa | Responsabilidade | Módulo |
 |---|---|---|
-| Felipe Teodoro | Extração, chunking e embeddings | `src/ingestion/` |
-| Pessoa 2 | RAG pipeline, prompts e avaliação | `src/retrieval/` |
-| Pessoa 3 | Interface Streamlit e deploy | `src/app/` |
+| Felipe Teodoro | Data pipeline: extração, chunking e embeddings | `src/ingestion/` + `notebooks/01` |
+| Pessoa 2 | RAG core: retrieval, prompts, avaliação e LangGraph | `src/retrieval/` + `notebooks/02` |
+| Pessoa 3 | Interface Streamlit, deploy e documentação | `src/app/` + `README` |
 
 ---
 
 ## Exemplos de Perguntas
 
-- "Quantos dias de férias o trabalhador tem direito?"
+- "Quantos dias de férias o trabalhador tem direito por ano?"
 - "O empregador pode demitir durante licença médica?"
 - "Qual a jornada máxima de trabalho diária?"
 - "Quais são os direitos da trabalhadora gestante?"
+- "O que é aviso prévio e qual o prazo mínimo?"
+- "Como funciona o FGTS?"
+
+---
+
+## Licença
+
+Projeto acadêmico sem fins comerciais. A CLT é documento de domínio público.
