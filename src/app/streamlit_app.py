@@ -1,4 +1,6 @@
 import streamlit as st
+import sys, os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from src.retrieval.agent import get_agent_answer
 
 # ── Página ───────────────────────────────────────────────────────────────────
