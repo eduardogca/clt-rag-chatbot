@@ -170,16 +170,7 @@ def _build_graph():
 _graph = None
 
 
-def get_agent_answer(question: str, chat_history: list[tuple[str, str]]) -> str:
-    """Executa o pipeline RAG agêntico com avaliação de relevância e retry de query.
-
-    Fluxo:
-        1. Recupera k=8 chunks do vectorstore
-        2. Avalia cada chunk com cosine similarity + LLM-as-judge
-        3. Se relevância média < threshold e tentativas < MAX_ATTEMPTS,
-           reformula a query e repete
-        4. Gera resposta usando apenas chunks de alta relevância
-    """
+def _run_graph(question: str, chat_history: list[tuple[str, str]]) -> dict:
     global _graph
     if _graph is None:
         _graph = _build_graph()
@@ -195,7 +186,7 @@ def get_agent_answer(question: str, chat_history: list[tuple[str, str]]) -> str:
             "question": question,
         })
 
-    result = _graph.invoke({
+    return _graph.invoke({
         "original_question": question,
         "current_query": query,
         "chat_history": chat_history,
@@ -204,4 +195,43 @@ def get_agent_answer(question: str, chat_history: list[tuple[str, str]]) -> str:
         "attempts": 0,
         "answer": "",
     })
-    return result["answer"]
+
+
+def _extract_sources(result: dict) -> list[dict]:
+    scores = result.get("chunk_scores", [])
+    good = [s for s in scores if s["combined"] >= RELEVANCE_THRESHOLD]
+    docs_to_use = good if good else scores[:4]
+    return [
+        {
+            "artigo": s["doc"].metadata.get("artigo", ""),
+            "content": s["doc"].page_content,
+        }
+        for s in docs_to_use
+        if s["doc"].metadata.get("artigo", "")
+    ]
+
+
+def get_agent_answer(question: str, chat_history: list[tuple[str, str]]) -> str:
+    """Executa o pipeline RAG agêntico com avaliação de relevância e retry de query.
+
+    Fluxo:
+        1. Recupera k=8 chunks do vectorstore
+        2. Avalia cada chunk com cosine similarity + LLM-as-judge
+        3. Se relevância média < threshold e tentativas < MAX_ATTEMPTS,
+           reformula a query e repete
+        4. Gera resposta usando apenas chunks de alta relevância
+    """
+    return _run_graph(question, chat_history)["answer"]
+
+
+def get_agent_answer_with_sources(
+    question: str, chat_history: list[tuple[str, str]]
+) -> tuple[str, list[dict]]:
+    """Executa o pipeline RAG agêntico e retorna resposta + artigos utilizados.
+
+    Returns:
+        Tupla (answer, sources) onde sources é uma lista de dicts
+        {"artigo": str, "content": str} dos chunks efetivamente usados na geração.
+    """
+    result = _run_graph(question, chat_history)
+    return result["answer"], _extract_sources(result)
