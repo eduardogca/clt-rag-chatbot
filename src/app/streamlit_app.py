@@ -1,7 +1,7 @@
+import re
 import streamlit as st
-import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-from src.retrieval.agent import get_agent_answer
+from src.retrieval.agent import get_agent_answer_with_sources
+from src.retrieval.chain import get_answer_with_sources
 
 # ── Página ───────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -30,21 +30,25 @@ st.markdown("""
     --user-border:  #b8cfb8;
 }
 
+/* ── Reset geral ── */
 html, body, [class*="css"] {
     font-family: 'IBM Plex Sans', sans-serif !important;
     background-color: var(--bg) !important;
     color: var(--text) !important;
 }
 
+/* ── Título ── */
 h1 {
     font-family: 'Lora', serif !important;
     color: var(--accent) !important;
 }
 
+/* ── App background ── */
 .stApp {
     background-color: var(--bg) !important;
 }
 
+/* ── Sidebar ── */
 [data-testid="stSidebar"] {
     background-color: var(--surface) !important;
     border-right: 1px solid var(--border) !important;
@@ -74,6 +78,7 @@ h1 {
     color: var(--text-muted);
 }
 
+/* ── Botões ── */
 .stButton > button {
     background: var(--surface2) !important;
     color: var(--text) !important;
@@ -87,6 +92,7 @@ h1 {
     background: var(--border) !important;
 }
 
+/* ── Badge de modo agêntico ── */
 .mode-badge {
     display: inline-block;
     font-size: 0.72rem;
@@ -101,6 +107,22 @@ h1 {
     font-family: 'IBM Plex Sans', sans-serif;
 }
 
+/* ── Badge de modo simples ── */
+.mode-badge-simple {
+    display: inline-block;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.18rem 0.6rem;
+    border-radius: 4px;
+    background: var(--surface2);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    margin-bottom: 1rem;
+    font-family: 'IBM Plex Sans', sans-serif;
+}
+
+/* ── Mensagem de boas-vindas ── */
 .welcome {
     text-align: center;
     padding: 2.5rem 1rem 1.5rem;
@@ -110,6 +132,7 @@ h1 {
 }
 .welcome .icon { font-size: 2.2rem; margin-bottom: 0.6rem; }
 
+/* ── Chat input ── */
 [data-testid="stChatInput"] {
     background: var(--surface) !important;
     border: 1px solid var(--border) !important;
@@ -120,6 +143,7 @@ h1 {
     background: transparent !important;
 }
 
+/* ── Chat messages ── */
 [data-testid="stChatMessage"] {
     background: var(--surface) !important;
     border: 1px solid var(--border) !important;
@@ -127,16 +151,76 @@ h1 {
     margin-bottom: 0.5rem !important;
 }
 
+/* ── Divider ── */
 hr { border-color: var(--border) !important; }
+
+/* ── Esconder elementos padrão ── */
 #MainMenu, footer { visibility: hidden; }
 .block-container { max-width: 760px !important; }
 </style>
 """, unsafe_allow_html=True)
 
+
+# ── Funções auxiliares ────────────────────────────────────────────────────────
+
+def _normalize_artigo(text: str) -> str:
+    """Extrai o identificador canônico de um artigo: número + sufixo letra."""
+    m = re.search(r'(\d+)[º°]?(-[A-Za-z])?', text)
+    if not m:
+        return ""
+    return m.group(1) + (m.group(2) or "").upper()
+
+
+def _inject_tooltips(text: str, sources: list[dict]) -> str:
+    """Envolve menções a artigos (Art. XXX) em <span> com tooltip nativo HTML."""
+    if not sources:
+        return text
+
+    source_map: dict[str, str] = {}
+    for s in sources:
+        key = _normalize_artigo(s.get("artigo", ""))
+        if key:
+            source_map[key] = s["content"]
+
+    def replace(m: re.Match) -> str:
+        full = m.group(0)
+        key = _normalize_artigo(full)
+        if key not in source_map:
+            return full
+        content = source_map[key]
+        snippet = content[:200] + ("..." if len(content) > 200 else "")
+        snippet = snippet.replace("\n", " ").replace('"', "&quot;").replace("'", "&#39;")
+        return (
+            f'<span title="{snippet}" style="border-bottom:1px dotted var(--accent);'
+            f"cursor:help;color:var(--accent);font-weight:500;\">{full}</span>"
+        )
+
+    return re.sub(r'\b[Aa]rt\.\s*\d+[º°]?(?:-[A-Z])?\b', replace, text)
+
+
+def _render_sources_expander(sources: list[dict]) -> None:
+    with st.expander(f"📖 Artigos da CLT consultados ({len(sources)})"):
+        for s in sources:
+            st.markdown(f"**{s['artigo']}**")
+            snippet = s["content"]
+            if len(snippet) > 300:
+                snippet = snippet[:300] + "..."
+            st.markdown(snippet)
+
+
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("### ⚖️ CLT Assistente")
     st.caption("Chatbot RAG · NLP 6º Semestre")
+    st.divider()
+
+    agentic_mode = st.toggle("Modo agêntico", value=True, key="agentic_mode")
+    st.caption(
+        "Agêntico: avalia relevância e reformula query. "
+        "Simples: mais rápido, menos chamadas à API."
+    )
+    show_sources = st.toggle("Mostrar artigos utilizados", value=True, key="show_sources")
+
     st.divider()
 
     st.markdown("""
@@ -181,10 +265,16 @@ with st.sidebar:
 # ── Header ────────────────────────────────────────────────────────────────────
 st.title("⚖️ Assistente da CLT")
 st.caption("Tire suas dúvidas sobre a Consolidação das Leis do Trabalho brasileira.")
-st.markdown(
-    '<span class="mode-badge">✦ RAG agêntico · avaliação de relevância · LangGraph</span>',
-    unsafe_allow_html=True,
-)
+if agentic_mode:
+    st.markdown(
+        '<span class="mode-badge">✦ RAG agêntico · avaliação de relevância · LangGraph</span>',
+        unsafe_allow_html=True,
+    )
+else:
+    st.markdown(
+        '<span class="mode-badge-simple">◦ RAG simples · 1 chamada por pergunta</span>',
+        unsafe_allow_html=True,
+    )
 
 # ── Estado da sessão ──────────────────────────────────────────────────────────
 if "messages" not in st.session_state:
@@ -203,7 +293,13 @@ if not st.session_state.messages:
 # ── Renderiza histórico ───────────────────────────────────────────────────────
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
+        if msg["role"] == "assistant":
+            sources = msg.get("sources", [])
+            st.markdown(_inject_tooltips(msg["content"], sources), unsafe_allow_html=True)
+            if show_sources and sources:
+                _render_sources_expander(sources)
+        else:
+            st.markdown(msg["content"])
 
 # ── Input e processamento ─────────────────────────────────────────────────────
 if question := st.chat_input("Faça sua pergunta sobre a CLT..."):
@@ -211,16 +307,25 @@ if question := st.chat_input("Faça sua pergunta sobre a CLT..."):
     with st.chat_message("user"):
         st.markdown(question)
 
-    msgs = st.session_state.messages[:-1]
+    # Converte histórico para lista de tuplas (humano, assistente)
+    msgs = st.session_state.messages[:-1]  # exclui a pergunta atual
     history: list[tuple[str, str]] = []
     for i in range(0, len(msgs) - 1, 2):
         if msgs[i]["role"] == "user" and msgs[i + 1]["role"] == "assistant":
             history.append((msgs[i]["content"], msgs[i + 1]["content"]))
 
     with st.chat_message("assistant"):
-        with st.spinner("Consultando a CLT..."):
+        spinner_text = (
+            "Consultando a CLT (modo agêntico)..." if agentic_mode
+            else "Consultando a CLT..."
+        )
+        sources: list[dict] = []
+        with st.spinner(spinner_text):
             try:
-                answer = get_agent_answer(question, history)
+                if agentic_mode:
+                    answer, sources = get_agent_answer_with_sources(question, history)
+                else:
+                    answer, sources = get_answer_with_sources(question, history)
             except Exception as e:
                 answer = (
                     "⚠️ Ocorreu um erro ao processar sua pergunta.\n\n"
@@ -228,6 +333,11 @@ if question := st.chat_input("Faça sua pergunta sobre a CLT..."):
                     "Verifique se o ChromaDB foi gerado e se `GOOGLE_API_KEY` "
                     "está configurada no `.env`."
                 )
-        st.markdown(answer)
 
-    st.session_state.messages.append({"role": "assistant", "content": answer})
+        st.markdown(_inject_tooltips(answer, sources), unsafe_allow_html=True)
+        if show_sources and sources:
+            _render_sources_expander(sources)
+
+    st.session_state.messages.append(
+        {"role": "assistant", "content": answer, "sources": sources}
+    )
