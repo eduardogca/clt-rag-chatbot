@@ -81,3 +81,40 @@ def get_answer(question: str, chat_history: list[tuple[str, str]]) -> str:
     return (_QA_PROMPT | llm | StrOutputParser()).invoke(
         {"context": context, "question": question}
     )
+
+
+def get_answer_with_sources(
+    question: str, chat_history: list[tuple[str, str]]
+) -> tuple[str, list[dict]]:
+    """Consulta a CLT e retorna resposta + lista de artigos utilizados.
+
+    Returns:
+        Tupla (answer, sources) onde sources é uma lista de dicts
+        {"artigo": str, "content": str}.
+    """
+    llm, retriever = _get_components()
+
+    if chat_history:
+        formatted_history = "\n".join(
+            f"Humano: {h}\nAssistente: {a}" for h, a in chat_history
+        )
+        question = (_CONDENSE_PROMPT | llm | StrOutputParser()).invoke(
+            {"chat_history": formatted_history, "question": question}
+        )
+
+    docs = retriever.invoke(question)
+    context = "\n\n".join(doc.page_content for doc in docs)
+
+    answer = (_QA_PROMPT | llm | StrOutputParser()).invoke(
+        {"context": context, "question": question}
+    )
+
+    sources = [
+        {
+            "artigo": doc.metadata.get("artigo", ""),
+            "content": doc.page_content,
+        }
+        for doc in docs
+        if doc.metadata.get("artigo", "")
+    ]
+    return answer, sources
